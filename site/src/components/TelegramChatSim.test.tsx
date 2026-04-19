@@ -1,7 +1,7 @@
 import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { TelegramChatSim } from './TelegramChatSim'
-import { ChatEvent } from '../data/types'
+import type { ChatEvent } from '../data/types'
 
 describe('<TelegramChatSim>', () => {
   beforeEach(() => { vi.useFakeTimers() })

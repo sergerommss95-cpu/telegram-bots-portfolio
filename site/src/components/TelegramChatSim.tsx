@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChatEvent } from '../data/types'
+import type { ChatEvent } from '../data/types'
 
 interface Props {
   script: ChatEvent[]

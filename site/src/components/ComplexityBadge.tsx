@@ -1,4 +1,4 @@
-import { Complexity } from '../data/types'
+import type { Complexity } from '../data/types'
 
 const LABELS: Record<Complexity, string> = {
   1: 'Basic',
