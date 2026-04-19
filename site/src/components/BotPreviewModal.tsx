@@ -8,9 +8,10 @@ interface Props {
   onClose: () => void
   title: string
   children: ReactNode
+  wide?: boolean
 }
 
-export function BotPreviewModal({ open, onClose, title, children }: Props) {
+export function BotPreviewModal({ open, onClose, title, children, wide = false }: Props) {
   const cardRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
 
@@ -82,7 +83,7 @@ export function BotPreviewModal({ open, onClose, title, children }: Props) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-lg max-h-[90vh] overflow-auto rounded-2xl border border-white/10 bg-[#0f1220]/95 backdrop-blur-xl shadow-2xl shadow-black/50 outline-none"
+            className={`relative w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] overflow-auto rounded-2xl border border-white/10 bg-[#0f1220]/95 backdrop-blur-xl shadow-2xl shadow-black/50 outline-none`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
