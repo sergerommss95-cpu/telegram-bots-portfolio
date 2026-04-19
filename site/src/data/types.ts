@@ -8,6 +8,14 @@ export type Complexity = 1 | 2 | 3 | 4
 
 export type CaseKind = 'real' | 'miniapp' | 'simulator'
 
+export interface CaseStudy {
+  problem: string
+  solution: string
+  metrics: Array<{ label: string; value: string }>
+  architecture: string[]
+  quote?: { text: string; author: string }
+}
+
 export interface Case {
   id: CaseId
   name: string
@@ -22,6 +30,7 @@ export interface Case {
     telegramUrl: string
     screenshots?: string[]
   }
+  study?: CaseStudy
 }
 
 export type EventId = string
