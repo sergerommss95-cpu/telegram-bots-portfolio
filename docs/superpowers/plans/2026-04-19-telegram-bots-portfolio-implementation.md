@@ -642,7 +642,7 @@ git add -A && git commit -m "feat(ui): add ambient orbs + fake telegram frame"
 - Create: `site/src/components/TelegramChatSim.tsx`
 - Create: `site/src/components/TelegramChatSim.test.tsx`
 
-- [ ] **Step 1: Write failing test for linear playback**
+- [ ] **Step 1: Write failing tests (5 cases)**
 
 Create `site/src/components/TelegramChatSim.test.tsx`:
 
@@ -682,7 +682,24 @@ describe('<TelegramChatSim>', () => {
     expect(screen.queryByText('Skipped')).not.toBeInTheDocument()
   })
 
-  it('warns on unresolved jumpTo in dev', async () => {
+  it('continues linearly after jumping to a label', async () => {
+    const script: ChatEvent[] = [
+      { role: 'bot', type: 'text', text: 'a', delayMs: 50 },
+      { role: 'bot', type: 'buttons', inline: [{ label: 'go', jumpTo: 'mid' }] },
+      { role: 'bot', type: 'text', text: 'b', delayMs: 50 },
+      { id: 'mid', type: 'label' },
+      { role: 'bot', type: 'text', text: 'c', delayMs: 50 },
+    ]
+    const { getByRole } = render(<TelegramChatSim script={script} botName="T" />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(200) })
+    getByRole('button', { name: 'go' }).click()
+    await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+    expect(screen.getByText('a')).toBeInTheDocument()
+    expect(screen.queryByText('b')).not.toBeInTheDocument()
+    expect(screen.getByText('c')).toBeInTheDocument()
+  })
+
+  it('warns on unresolved jumpTo', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const script: ChatEvent[] = [
       { role: 'bot', type: 'buttons', inline: [{ label: 'X', jumpTo: 'nowhere' }] },
@@ -692,6 +709,13 @@ describe('<TelegramChatSim>', () => {
     getByRole('button', { name: 'X' }).click()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('nowhere'))
     warn.mockRestore()
+  })
+
+  it('wraps transcript in role="log" with aria-live="polite"', () => {
+    const { container } = render(<TelegramChatSim script={[]} botName="T" />)
+    const log = container.querySelector('[role="log"]')
+    expect(log).toBeInTheDocument()
+    expect(log).toHaveAttribute('aria-live', 'polite')
   })
 })
 ```
@@ -838,7 +862,7 @@ function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)) }
 npx vitest run src/components/TelegramChatSim.test.tsx
 ```
 
-Expected: 3 PASS.
+Expected: 5 PASS.
 
 - [ ] **Step 4: Commit**
 
@@ -916,69 +940,102 @@ git add -A && git commit -m "feat(script): add ShopBot reference simulator scrip
 
 ---
 
+## Day 1 midpoint checkpoint
+
+After Task 10 (ShopBot reference simulator verified in browser), explicitly decide:
+
+- **On track?** → Continue with all 8 simulators in Phase 5.
+- **Behind schedule?** → Cut Tasks 14, 16, 17 (Guard, Voice, Ref). Ship with 10 cases (4 real + 1 MiniApp + 5 simulators). Still hits spec §14 "10+ minimum acceptable".
+
 ## Phase 5 — Remaining 7 simulator scripts
+
+**Time reality check:** these are **data-authoring** tasks (~15 min each, not 2-5 min). Total ~2h for 7 scripts.
+
+**Conventions all scripts MUST follow:**
+- Export name: `export const <name>Script: ChatEvent[]` (e.g., `bookitScript`, `quizScript`, not `default`).
+- Event IDs are namespaced with bot slug prefix: `bookit-cart`, `quiz-q2`, `photo-result`. This prevents collisions if scripts are ever concatenated or cross-referenced.
+- Target 12-18 events per script.
+- Every `jumpTo` must reference an `id` defined in the same script. Verify with `npx tsc --noEmit` after each.
+- End each script with a clear terminal message so `onComplete` fires naturally.
+
+**Commit + typecheck gate per task:**
+
+```bash
+cd site && npx tsc --noEmit && git add -A && git commit -m "feat(script): add <botname> simulator"
+```
 
 ### Task 11: BookIt script (appointment booking)
 
 **Files:** Create: `site/src/scripts/bookit.ts`
 
-- [ ] **Step 1: Write script** covering: hi → choose service → calendar date buttons (3 options) → time buttons (3 options) → confirmation with details → reminder setup.
+- [ ] **Step 1: Write script** — scenario: hi → choose service (3 buttons) → date picker (3 date buttons) → time slot (3 time buttons) → confirmation with service + datetime → reminder button → "reminder set" end.
 
-Use the pattern from `shop.ts`. ~15-20 events.
+Skeleton to fill in:
 
-- [ ] **Step 2: Commit**
+```ts
+import { ChatEvent } from '../data/types'
 
-```bash
-git add -A && git commit -m "feat(script): add BookIt booking simulator"
+export const bookitScript: ChatEvent[] = [
+  { role: 'bot', type: 'text', text: 'Привіт! Я BookIt 📅\nОберіть послугу:', delayMs: 500 },
+  { role: 'bot', type: 'buttons', inline: [
+    { label: 'Стрижка', jumpTo: 'bookit-date' },
+    { label: 'Манікюр', jumpTo: 'bookit-date' },
+    { label: 'Масаж', jumpTo: 'bookit-date' },
+  ]},
+  { id: 'bookit-date', role: 'bot', type: 'text', text: 'Оберіть дату:', delayMs: 300 },
+  // ...12-15 more events, ending with a confirmation text
+]
 ```
+
+- [ ] **Step 2: Typecheck + commit**
 
 ### Task 12: QuizMaster script
 
 **Files:** Create: `site/src/scripts/quiz.ts`
 
-- [ ] **Step 1: Write script** — category → Q1 (4 choices, correct jumps to Q2, wrong to retry) → Q2 → Q3 → final score + leaderboard rank.
+- [ ] **Step 1: Write script** — category → Q1 with 4 choices (correct → `quiz-q2`, wrong → `quiz-retry`) → Q2 → Q3 → final score "Ви набрали X/3 очок, місце N в таблиці".
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Typecheck + commit**
 
 ### Task 13: PhotoMagic script
 
 **Files:** Create: `site/src/scripts/photo.ts`
 
-- [ ] **Step 1: Write script** — upload photo (simulated image event) → choose style (Anime/Oil/Cyberpunk) → typing "Generating..." → result image (placeholder) → share buttons.
+- [ ] **Step 1: Write script** — greeting → user image event (placeholder URL from `https://picsum.photos/300/300`) → style buttons (Anime / Oil / Cyberpunk) → typing "Генерую…" 1500ms → result image (another picsum URL) → "Зберегти" + "Ще раз" buttons.
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Typecheck + commit**
 
 ### Task 14: GuardBot script
 
 **Files:** Create: `site/src/scripts/guard.ts`
 
-- [ ] **Step 1: Write script** showing group context — new user joins → welcome message → captcha challenge → pass/fail branches → spam message → auto-delete + ban notification.
+- [ ] **Step 1: Write script** — group context narration → "New user joined" → welcome message with captcha question (3 buttons, 1 correct) → correct → welcome. Then new user posts spam (shown as text) → typing "🚨 Detected spam..." → auto-delete notification + ban confirmation.
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Typecheck + commit**
 
 ### Task 15: SupportHero script
 
 **Files:** Create: `site/src/scripts/support.ts`
 
-- [ ] **Step 1: Write script** — "How can I help?" → 3 categories (Billing/Tech/Other) → each creates ticket → agent handoff → SLA message.
+- [ ] **Step 1: Write script** — "Як можу допомогти?" → 3 category buttons (Білінг / Тех. проблема / Інше) → each creates ticket with ID → typing "Передаю агенту…" → "Агент Олексій приєднався, SLA 15 хв" message.
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Typecheck + commit**
 
 ### Task 16: VoiceNote AI script
 
 **Files:** Create: `site/src/scripts/voice.ts`
 
-- [ ] **Step 1: Write script** — simulated voice message (text "🎤 Voice 0:12") → typing "Транскрибую..." → transcript → typing "Думаю..." → GPT summary answer → follow-up buttons.
+- [ ] **Step 1: Write script** — user sends voice (text event styled as "🎤 Voice 0:12") → typing "Транскрибую…" 1200ms → bot shows transcript as text → typing "Думаю…" 800ms → GPT-style summary response → follow-up buttons ("Переказати" / "Підсумувати").
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Typecheck + commit**
 
 ### Task 17: RefMaster script
 
 **Files:** Create: `site/src/scripts/ref.ts`
 
-- [ ] **Step 1: Write script** — /start → personal ref link generated → stats panel (clicks, signups, earnings) → payout button → payout confirmation.
+- [ ] **Step 1: Write script** — /start → "Ваше реф-посилання: t.me/botname?start=ref_A4F2" → stats panel text block ("Кліків: 42, Реєстрацій: 7, Зароблено: 280 UAH") → "Вивести" button → typing "Обробляю…" → "✅ Виплата 280 UAH надіслана на картку ****5432".
 
-- [ ] **Step 2: Commit**
+- [ ] **Step 2: Typecheck + commit**
 
 ---
 
@@ -1099,24 +1156,24 @@ export const features: Feature[] = [
   { id: 'analytics', labelUa: 'Аналітика', category: 'admin' },
 ]
 
+// IMPORTANT: All feature IDs with hyphens must be quoted (TS parser requirement).
+// Keys not listed for a case default to 'none' at the render layer.
 export const coverage: Coverage = {
-  olivia: { stars: 'full', crypto: 'full', llm: 'full', fsm: 'full', db: 'full', i18n: 'full', admin: 'full', channel: 'full', stream: 'full', rate-limit: 'full', inline-kb: 'full' },
-  taro: { stars: 'full', crypto: 'full', fiat: 'full', llm: 'full', fsm: 'full', db: 'full', i18n: 'full', admin: 'full', inline-kb: 'full', stream: 'full' },
-  repair: { webhook: 'full', fsm: 'full', db: 'full', admin: 'full', contact: 'full', docker: 'full', inline-kb: 'full', i18n: 'partial', rate-limit: 'full' },
-  broadcaster: { channel: 'full', rate-limit: 'full' },
-  taptoorder: { stars: 'full', miniapp: 'full', webhook: 'full', fsm: 'full', db: 'full', docker: 'full', inline-kb: 'full' },
-  shop: { stars: 'full', fsm: 'full', db: 'full', inline-kb: 'full', admin: 'partial' },
-  bookit: { fsm: 'full', db: 'full', inline-kb: 'full', admin: 'full' },
-  quiz: { fsm: 'full', db: 'full', inline-kb: 'full', rate-limit: 'full' },
-  photo: { image-gen: 'full', fsm: 'full', inline-kb: 'full', rate-limit: 'full' },
-  guard: { moderation: 'full', fsm: 'full', admin: 'full', rate-limit: 'full' },
+  olivia: { stars: 'full', crypto: 'full', llm: 'full', fsm: 'full', db: 'full', i18n: 'full', admin: 'full', channel: 'full', stream: 'full', 'rate-limit': 'full', 'inline-kb': 'full' },
+  taro: { stars: 'full', crypto: 'full', fiat: 'full', llm: 'full', fsm: 'full', db: 'full', i18n: 'full', admin: 'full', 'inline-kb': 'full', stream: 'full' },
+  repair: { webhook: 'full', fsm: 'full', db: 'full', admin: 'full', contact: 'full', docker: 'full', 'inline-kb': 'full', i18n: 'partial', 'rate-limit': 'full' },
+  broadcaster: { channel: 'full', 'rate-limit': 'full' },
+  taptoorder: { stars: 'full', miniapp: 'full', webhook: 'full', fsm: 'full', db: 'full', docker: 'full', 'inline-kb': 'full' },
+  shop: { stars: 'full', fsm: 'full', db: 'full', 'inline-kb': 'full', admin: 'partial' },
+  bookit: { fsm: 'full', db: 'full', 'inline-kb': 'full', admin: 'full' },
+  quiz: { fsm: 'full', db: 'full', 'inline-kb': 'full', 'rate-limit': 'full' },
+  photo: { 'image-gen': 'full', fsm: 'full', 'inline-kb': 'full', 'rate-limit': 'full' },
+  guard: { moderation: 'full', fsm: 'full', admin: 'full', 'rate-limit': 'full' },
   support: { fsm: 'full', db: 'full', webhook: 'full', admin: 'full', analytics: 'partial' },
   voice: { voice: 'full', llm: 'full', stream: 'full', fsm: 'full' },
   ref: { fsm: 'full', db: 'full', analytics: 'full', admin: 'full' },
 } as Coverage
 ```
-
-**Note:** The object keys with hyphens need to be quoted — fix that in your implementation. The sketch above uses shorthand for readability; in real code write `'rate-limit': 'full'`, `'inline-kb': 'full'`, `'image-gen': 'full'`.
 
 - [ ] **Step 2: Type-check**
 
@@ -1183,7 +1240,10 @@ git add -A && git commit -m "feat(data): add pricing tiers"
 
 ### Task 21: `<BotPreviewModal>` and `<Cases>` section
 
-**Files:** Create: `site/src/components/BotPreviewModal.tsx`, `site/src/sections/Cases.tsx`
+**Files:**
+- Create: `site/src/components/BotPreviewModal.tsx`
+- Create: `site/src/components/PricingCard.tsx` (stub for Task 23; define now to keep import paths stable)
+- Create: `site/src/sections/Cases.tsx`
 
 - [ ] **Step 1: Implement BotPreviewModal**
 
@@ -1230,16 +1290,43 @@ export function BotPreviewModal({ open, onClose, title, children }: Props) {
 
 Create `site/src/sections/Cases.tsx`. Render a Bento grid of 13 cards using `cases` data and `<GlassCard interactive>`. Clicking opens `<BotPreviewModal>` with:
 - Real bots → QR code + screenshots placeholder + "Відкрити в Telegram" button
-- Simulator → dynamically imported script + `<TelegramChatSim>`
+- Simulator → dynamically imported script + `<TelegramChatSim>` (pass `key={case.id + String(open)}` to force remount on each modal open — ensures simulator state resets)
 - Mini App → iframe of `/mini-app` in `<FakeTelegramFrame>` + QR
 
-Use lazy-import for scripts:
+**Full lazy-import map (follows `<name>Script` export convention):**
 
 ```tsx
-const scripts = {
+const scriptLoaders = {
   shop: () => import('../scripts/shop').then((m) => m.shopScript),
   bookit: () => import('../scripts/bookit').then((m) => m.bookitScript),
-  // ...etc
+  quiz: () => import('../scripts/quiz').then((m) => m.quizScript),
+  photo: () => import('../scripts/photo').then((m) => m.photoScript),
+  guard: () => import('../scripts/guard').then((m) => m.guardScript),
+  support: () => import('../scripts/support').then((m) => m.supportScript),
+  voice: () => import('../scripts/voice').then((m) => m.voiceScript),
+  ref: () => import('../scripts/ref').then((m) => m.refScript),
+} as const
+```
+
+Also create `site/src/components/PricingCard.tsx` as a minimal stub (will be fleshed out in Task 23):
+
+```tsx
+import { PricingPackage } from '../data/pricing'
+import { GlassCard } from './GlassCard'
+
+export function PricingCard({ pkg }: { pkg: PricingPackage }) {
+  return (
+    <GlassCard className={`p-6 ${pkg.highlight ? 'ring-2 ring-[var(--color-accent-purple)]/50' : ''}`}>
+      <div className="text-xs uppercase text-white/50">{pkg.subtitle}</div>
+      <h3 className="text-2xl font-bold mt-1">{pkg.name}</h3>
+      <div className="mt-3 text-lg text-white/90">{pkg.uah}</div>
+      <div className="text-sm text-white/60">{pkg.usd}</div>
+      <div className="mt-2 text-xs text-white/50">{pkg.timeline}</div>
+      <ul className="mt-4 space-y-1 text-sm text-white/80">
+        {pkg.features.map((f) => <li key={f}>· {f}</li>)}
+      </ul>
+    </GlassCard>
+  )
 }
 ```
 
@@ -1379,7 +1466,7 @@ if not BOT_TOKEN:
 - [ ] **Step 3: bot.py with handlers**
 
 ```python
-from aiogram import Bot, Dispatcher, Router
+from aiogram import Bot, Dispatcher, Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, LabeledPrice, PreCheckoutQuery
 from .config import BOT_TOKEN, MINI_APP_URL
@@ -1399,7 +1486,7 @@ async def start(m: Message):
 async def pre_checkout(q: PreCheckoutQuery):
     await q.answer(ok=True)
 
-@router.message(lambda m: m.successful_payment is not None)
+@router.message(F.successful_payment)
 async def paid(m: Message):
     await m.answer(f"✅ Дякуємо! Замовлення #{m.successful_payment.telegram_payment_charge_id[:6]} прийнято.")
 
@@ -1450,8 +1537,14 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 - [ ] **Step 6: .env.example**
 
 ```
+# Bot token from @BotFather
 BOT_TOKEN=
+
+# Base URL of this backend (no trailing slash, no /webhook path). main.py appends /webhook.
+# Example: https://taptoorder.up.railway.app
 WEBHOOK_URL=
+
+# Public URL of the Mini App frontend (hosted on Vercel)
 MINI_APP_URL=https://<vercel-subdomain>/mini-app
 ```
 
@@ -1478,35 +1571,116 @@ git add -A && git commit -m "feat(miniapp): scaffold FastAPI + aiogram backend"
 **Files:**
 - Create: `site/src/pages/MiniApp.tsx`
 - Modify: `site/src/App.tsx` (add route)
+- Modify: `site/src/pages/Home.tsx` (may not exist yet — create as simple wrapper of all sections)
 
-- [ ] **Step 1: Install @twa-dev/sdk**
-
-```bash
-cd site && npm install @twa-dev/sdk
-```
-
-- [ ] **Step 2: Implement MiniApp.tsx**
-
-Component with: 6 mock products grid, cart state (useState), total, "Оплатити ⭐" button that calls `tg.sendData(JSON.stringify(cart))` if in Telegram, or shows mock success in standalone mode. Wrap in `<FakeTelegramFrame>` when not in Telegram (check `window.Telegram?.WebApp`).
-
-- [ ] **Step 3: Add router**
-
-Install `react-router-dom`:
+- [ ] **Step 1: Install dependencies (router first — tsc needs it for MiniApp.tsx)**
 
 ```bash
-npm install react-router-dom
+cd site && npm install react-router-dom @twa-dev/sdk
 ```
 
-Modify `App.tsx`:
+- [ ] **Step 2: Implement MiniApp.tsx with SDK init-guard**
+
+**CRITICAL:** `@twa-dev/sdk` calls `window.Telegram.WebApp.ready()` on import, which throws in a plain browser. Use a lazy import pattern guarded by a typeof-window + presence check.
+
+```tsx
+import { useEffect, useState } from 'react'
+import { FakeTelegramFrame } from '../components/FakeTelegramFrame'
+
+interface Product { id: string; name: string; price: number; emoji: string }
+const PRODUCTS: Product[] = [
+  { id: 't1', name: 'Футболка чорна', price: 450, emoji: '👕' },
+  { id: 't2', name: 'Футболка Winter', price: 550, emoji: '🧥' },
+  { id: 'm1', name: 'Кружка керамічна', price: 280, emoji: '☕' },
+  { id: 'm2', name: 'Кружка з принтом', price: 320, emoji: '🍵' },
+  { id: 's1', name: 'Стікер-пак', price: 120, emoji: '🎨' },
+  { id: 's2', name: 'Набір шопер', price: 680, emoji: '🛍️' },
+]
+
+function isInTelegram() {
+  return typeof window !== 'undefined' && !!(window as any).Telegram?.WebApp
+}
+
+export function MiniApp() {
+  const [cart, setCart] = useState<Record<string, number>>({})
+  const [success, setSuccess] = useState(false)
+  const inTg = isInTelegram()
+
+  useEffect(() => {
+    if (!inTg) return
+    // Lazy-load only when actually in Telegram
+    import('@twa-dev/sdk').then(({ default: WebApp }) => {
+      WebApp.ready()
+      WebApp.expand()
+    })
+  }, [inTg])
+
+  const total = Object.entries(cart).reduce((sum, [id, qty]) => {
+    const p = PRODUCTS.find((x) => x.id === id)
+    return sum + (p?.price ?? 0) * qty
+  }, 0)
+
+  const pay = async () => {
+    if (inTg) {
+      const WebApp = (await import('@twa-dev/sdk')).default
+      WebApp.sendData(JSON.stringify({ cart, total }))
+    } else {
+      setSuccess(true)
+    }
+  }
+
+  const content = (
+    <div className="p-4">
+      <h2 className="text-lg font-semibold mb-4">Магазин TapToOrder</h2>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {PRODUCTS.map((p) => (
+          <button key={p.id}
+            onClick={() => setCart((c) => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }))}
+            className="rounded-xl bg-white/5 border border-white/10 p-3 text-left hover:bg-white/10">
+            <div className="text-2xl mb-1">{p.emoji}</div>
+            <div className="text-sm font-medium text-white">{p.name}</div>
+            <div className="text-xs text-white/60">{p.price} ⭐</div>
+            {cart[p.id] && <div className="text-xs mt-1 text-cyan-400">×{cart[p.id]}</div>}
+          </button>
+        ))}
+      </div>
+      {total > 0 && !success && (
+        <button onClick={pay} className="w-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 py-3 font-medium">
+          Оплатити {total} ⭐
+        </button>
+      )}
+      {success && (
+        <div className="rounded-xl bg-green-500/20 border border-green-500/40 p-4 text-center">
+          ✅ Тестова оплата успішна!<br/>
+          <span className="text-xs text-white/60">Гроші не списуються — це демо.</span>
+        </div>
+      )}
+      <p className="mt-4 text-xs text-white/40 text-center">
+        Тестовий магазин — Telegram Stars у test-env, справжні гроші не списуються.
+      </p>
+    </div>
+  )
+
+  return inTg ? content : <FakeTelegramFrame>{content}</FakeTelegramFrame>
+}
+```
+
+- [ ] **Step 3: Wire routes**
+
+Create `site/src/pages/Home.tsx` as a thin wrapper rendering all sections in order (if not already created in Task 23 Step 8, create now).
+
+Modify `site/src/App.tsx`:
 
 ```tsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Home } from './pages/Home'
 import { MiniApp } from './pages/MiniApp'
+import { AmbientOrbs } from './components/AmbientOrbs'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <AmbientOrbs />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/mini-app" element={<MiniApp />} />
@@ -1516,12 +1690,18 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 4: Run dev, navigate to `/mini-app`, verify it renders standalone with fake frame**
+- [ ] **Step 4: Run dev, navigate to `/mini-app`, verify standalone render**
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:5173/mini-app`. Verify: `<FakeTelegramFrame>` renders, 6 products, clicking adds to cart, "Оплатити X ⭐" button appears, clicking shows success state. Console must be clean (no `@twa-dev/sdk` errors).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A && git commit -m "feat(miniapp): add frontend /mini-app route with fake-frame fallback"
+npx tsc --noEmit && git add -A && git commit -m "feat(miniapp): add /mini-app route with SDK lazy-load guard"
 ```
 
 ---
@@ -1550,6 +1730,14 @@ cd site && npx vercel --prod
 
 - Vercel prompt: Root Directory = `site`
 - Capture assigned `.vercel.app` URL.
+
+- [ ] **Step 4: Verify SPA routing for `/mini-app`**
+
+```bash
+curl -I https://<vercel-subdomain>/mini-app
+```
+
+Expect: `HTTP/2 200` with `content-type: text/html`. If 404 — the rewrite rule didn't apply; re-check `vercel.json`.
 
 ---
 
