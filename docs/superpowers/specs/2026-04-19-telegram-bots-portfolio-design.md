@@ -194,7 +194,7 @@ Scripts live in `/src/scripts/<botName>.ts`. Each simulator is pure data — no 
 - **Backend:** Python FastAPI + aiogram, 1 Dockerfile, deploys to Railway free tier. **Bot runs in webhook mode** — on startup, backend calls `setWebhook` against its Railway public URL. Polling is not used because Railway's free sleep policy makes polling unreliable.
 - **`pre_checkout_query` handler:** must respond within **10s** (Telegram hard limit) with `answerPreCheckoutQuery(ok=True)`; otherwise user sees "Payment expired." Handler is stateless — it always approves since this is a demo.
 - **State:** in-memory cart (survives Mini App page lifetime); order record in SQLite. **SQLite is ephemeral on Railway** — deploys wipe the file. Acceptable for a demo since orders are mock. No volume mount required.
-- **Payment:** `sendInvoice` with `currency: 'XTR'` (Stars). For Stars, **no `provider_token` is required** (Telegram handles the charge directly). Test Stars mode: use the `/stars` bot to credit a test account and mark the bot for demo use; explicit demo disclaimer in chat says "Тестовий магазин — гроші не списуються."
+- **Payment:** `sendInvoice` with `currency: 'XTR'` (Stars). For Stars, **no `provider_token` is required** (Telegram handles the charge directly). For a demo that never actually charges real Stars, configure the bot in Telegram's **test environment** (via `@BotFather` → Bot Settings → Payments → toggle test mode, or run the bot in Telegram's test DC). In the test environment, Stars invoices go through the full flow but no balance moves. Explicit demo disclaimer in chat says "Тестовий магазин — гроші не списуються."
 - **Domain:** Railway-provided subdomain, set as Mini App URL in `@BotFather`.
 
 ### 7.3 On the portfolio site
