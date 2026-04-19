@@ -1,0 +1,40 @@
+import type { Feature, Coverage } from './types'
+
+export const features: Feature[] = [
+  { id: 'stars', labelUa: 'Платежі Stars', category: 'payments' },
+  { id: 'crypto', labelUa: 'CryptoBot', category: 'payments' },
+  { id: 'fiat', labelUa: 'Картки / Monobank', category: 'payments' },
+  { id: 'llm', labelUa: 'LLM (GPT / Claude)', category: 'ai' },
+  { id: 'voice', labelUa: 'Голос → текст', category: 'ai' },
+  { id: 'image-gen', labelUa: 'Генерація зображень', category: 'ai' },
+  { id: 'webhook', labelUa: 'Webhooks', category: 'integration' },
+  { id: 'inline-kb', labelUa: 'Inline-клавіатури', category: 'messaging' },
+  { id: 'fsm', labelUa: 'FSM / діалоги', category: 'messaging' },
+  { id: 'db', labelUa: 'БД (SQLite / Postgres)', category: 'integration' },
+  { id: 'i18n', labelUa: 'Мультимова', category: 'ux' },
+  { id: 'admin', labelUa: 'Адмін-панель', category: 'admin' },
+  { id: 'contact', labelUa: 'Contact share', category: 'messaging' },
+  { id: 'channel', labelUa: 'Розсилка в канал', category: 'messaging' },
+  { id: 'stream', labelUa: 'Streaming AI', category: 'ai' },
+  { id: 'rate-limit', labelUa: 'Rate-limiting', category: 'integration' },
+  { id: 'docker', labelUa: 'Docker / Deploy', category: 'integration' },
+  { id: 'miniapp', labelUa: 'Mini App', category: 'ux' },
+  { id: 'moderation', labelUa: 'Group moderation', category: 'admin' },
+  { id: 'analytics', labelUa: 'Аналітика', category: 'admin' },
+]
+
+export const coverage: Coverage = {
+  olivia: { stars: 'full', crypto: 'full', llm: 'full', fsm: 'full', db: 'full', i18n: 'full', admin: 'full', channel: 'full', stream: 'full', 'rate-limit': 'full', 'inline-kb': 'full' },
+  taro: { stars: 'full', crypto: 'full', fiat: 'full', llm: 'full', fsm: 'full', db: 'full', i18n: 'full', admin: 'full', 'inline-kb': 'full', stream: 'full' },
+  repair: { webhook: 'full', fsm: 'full', db: 'full', admin: 'full', contact: 'full', docker: 'full', 'inline-kb': 'full', i18n: 'partial', 'rate-limit': 'full' },
+  broadcaster: { channel: 'full', 'rate-limit': 'full' },
+  taptoorder: { stars: 'full', miniapp: 'full', webhook: 'full', fsm: 'full', db: 'full', docker: 'full', 'inline-kb': 'full' },
+  shop: { stars: 'full', fsm: 'full', db: 'full', 'inline-kb': 'full', admin: 'partial' },
+  bookit: { fsm: 'full', db: 'full', 'inline-kb': 'full', admin: 'full' },
+  quiz: { fsm: 'full', db: 'full', 'inline-kb': 'full', 'rate-limit': 'full' },
+  photo: { 'image-gen': 'full', fsm: 'full', 'inline-kb': 'full', 'rate-limit': 'full' },
+  guard: { moderation: 'full', fsm: 'full', admin: 'full', 'rate-limit': 'full' },
+  support: { fsm: 'full', db: 'full', webhook: 'full', admin: 'full', analytics: 'partial' },
+  voice: { voice: 'full', llm: 'full', stream: 'full', fsm: 'full' },
+  ref: { fsm: 'full', db: 'full', analytics: 'full', admin: 'full' },
+} as Coverage
