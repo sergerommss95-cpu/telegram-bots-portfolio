@@ -25,3 +25,41 @@ html, body, #root {
     backdrop-filter: none !important;
   }
 }
+
+@media print {
+  html, body, #root {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .proposal-printable, .proposal-printable * {
+    visibility: visible;
+  }
+  .proposal-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #ffffff !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 2rem !important;
+  }
+  .proposal-printable * {
+    color: #111111 !important;
+    background: transparent !important;
+    border-color: #ddd !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+  .proposal-printable a {
+    color: #1d4ed8 !important;
+    text-decoration: underline !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
