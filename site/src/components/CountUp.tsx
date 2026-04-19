@@ -29,14 +29,14 @@ export function CountUp({ from = 0, to, duration = 1.4, suffix = '', prefix = ''
     if (!inView || startedRef.current) return
     startedRef.current = true
 
-    if (prefersReducedMotion()) {
-      setValue(to)
-      return
-    }
-
     const start = performance.now()
     const total = duration * 1000
     let raf = 0
+
+    if (prefersReducedMotion()) {
+      raf = requestAnimationFrame(() => setValue(to))
+      return () => cancelAnimationFrame(raf)
+    }
 
     const tick = (now: number) => {
       const elapsed = now - start
