@@ -10,7 +10,7 @@ import { Footer } from '../sections/Footer'
 
 export function Home() {
   return (
-    <div className="relative">
+    <main className="relative">
       <Hero />
       <Ladder />
       <Cases />
@@ -20,6 +20,6 @@ export function Home() {
       <Pricing />
       <About />
       <Footer />
-    </div>
+    </main>
   )
 }
