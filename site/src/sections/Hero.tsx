@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import type { ChatEvent } from '../data/types'
 import { TelegramChatSim } from '../components/TelegramChatSim'
 import { FakeTelegramFrame } from '../components/FakeTelegramFrame'
@@ -53,11 +54,31 @@ const heroScript: ChatEvent[] = [
 ]
 
 export function Hero() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const reduce = useReducedMotion()
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start start', 'end start'],
+  })
+
+  // Headline rises slightly faster, frame tilts subtly — mapped to scrollYProgress.
+  // Hooks must be called unconditionally; we gate effects by passing ranges that resolve
+  // to zero when reduced motion is preferred.
+  const headlineY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, -80])
+  const frameRotate = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [-3, 1])
+  const frameY = useTransform(scrollYProgress, [0, 1], reduce ? [0, 0] : [0, -30])
+
   return (
-    <section className="min-h-screen flex items-center px-4 py-20 md:py-28">
+    <section
+      ref={sectionRef}
+      className="min-h-screen flex items-center px-4 py-20 md:py-28"
+    >
       <div className="mx-auto w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         {/* Left: copy */}
-        <div className="text-center lg:text-left order-1 lg:order-1">
+        <motion.div
+          style={{ y: headlineY }}
+          className="text-center lg:text-left order-1 lg:order-1"
+        >
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -108,7 +129,7 @@ export function Hero() {
               Замовити бота
             </a>
           </motion.div>
-        </div>
+        </motion.div>
 
         {/* Right: living chat */}
         <motion.div
@@ -117,7 +138,10 @@ export function Hero() {
           transition={{ duration: 0.7, delay: 0.25 }}
           className="order-2 lg:order-2 w-full"
         >
-          <div className="relative mx-auto max-w-sm">
+          <motion.div
+            style={{ rotate: frameRotate, y: frameY }}
+            className="relative mx-auto max-w-sm"
+          >
             {/* Ambient glow */}
             <div
               aria-hidden
@@ -126,7 +150,7 @@ export function Hero() {
             <FakeTelegramFrame title="Serhii Builds" subtitle="online">
               <TelegramChatSim script={heroScript} botName="Serhii Builds" />
             </FakeTelegramFrame>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

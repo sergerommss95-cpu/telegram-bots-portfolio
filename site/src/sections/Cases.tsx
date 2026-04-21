@@ -11,6 +11,7 @@ import { TelegramChatSim } from '../components/TelegramChatSim'
 import { ArchitectureDiagram } from '../components/ArchitectureDiagram'
 import { CountUp } from '../components/CountUp'
 import { TiltCard } from '../components/TiltCard'
+import { CaseCover } from '../components/CaseCover'
 
 const CATEGORY_ICONS: Record<string, string> = {
   'AI-астрологія': '🔮',
@@ -59,6 +60,7 @@ interface CardProps {
 
 function CaseCard({ c, onClick, featured }: CardProps) {
   const icon = CATEGORY_ICONS[c.category] ?? '🤖'
+  const showCover = c.kind === 'real' || c.kind === 'miniapp'
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -73,6 +75,11 @@ function CaseCard({ c, onClick, featured }: CardProps) {
           onClick={onClick}
           className="group block w-full text-left glass-card rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl shadow-black/50 p-6 hover:border-white/20 transition-colors cursor-pointer"
         >
+          {showCover && (
+            <div className="mb-5">
+              <CaseCover id={c.id} />
+            </div>
+          )}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <span className="text-3xl" aria-hidden>
@@ -362,16 +369,45 @@ function MiniAppContent({ c }: { c: Case }) {
   )
 }
 
+function updateDemoParam(id: string | null) {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (id) {
+    url.searchParams.set('demo', id)
+  } else {
+    url.searchParams.delete('demo')
+  }
+  const next = url.pathname + (url.search ? url.search : '') + url.hash
+  window.history.replaceState(null, '', next)
+}
+
 export function Cases() {
   const [selected, setSelected] = useState<Case | null>(null)
   const [openCounter, setOpenCounter] = useState(0)
 
+  // Deep-link: open a case modal on mount if ?demo=<id> matches.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const demo = params.get('demo')
+    if (!demo) return
+    const match = cases.find((c) => c.id === demo)
+    if (match) {
+      setSelected(match)
+      setOpenCounter((n) => n + 1)
+    }
+  }, [])
+
   const open = (c: Case) => {
     setSelected(c)
     setOpenCounter((n) => n + 1)
+    updateDemoParam(c.id)
   }
 
-  const close = () => setSelected(null)
+  const close = () => {
+    setSelected(null)
+    updateDemoParam(null)
+  }
 
   // The enriched modal needs more horizontal space — stretch max width for cases with study.
   const wideModal = !!selected?.study || selected?.kind === 'miniapp'
