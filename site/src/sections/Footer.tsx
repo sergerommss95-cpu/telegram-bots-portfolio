@@ -25,6 +25,13 @@ export function Footer() {
             Email
           </a>
         </div>
+        <div className="mt-5 text-[11px] text-white/30 hidden md:block">
+          Натисни{' '}
+          <kbd className="inline-flex items-center justify-center rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-white/60">
+            ?
+          </kbd>{' '}
+          для клавіатурних скорочень
+        </div>
       </div>
     </footer>
   )
