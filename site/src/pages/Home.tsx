@@ -11,6 +11,9 @@ import { Testimonials } from '../sections/Testimonials'
 import { Offer } from '../sections/Offer'
 import { About } from '../sections/About'
 import { Footer } from '../sections/Footer'
+import { ROICalculator } from '../sections/ROICalculator'
+import { Comparison } from '../sections/Comparison'
+import { FAQ } from '../sections/FAQ'
 
 export function Home() {
   return (
@@ -22,8 +25,11 @@ export function Home() {
       <MoreCapabilities />
       <ProofOfVelocity />
       <Process />
+      <ROICalculator />
+      <Comparison />
       <Pricing />
       <ProposalGenerator />
+      <FAQ />
       <Testimonials />
       <Offer />
       <About />
